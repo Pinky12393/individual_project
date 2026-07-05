@@ -1,0 +1,482 @@
+[
+  {
+    "question_id": "q_01",
+    "query": "как проверить, истёк ли токен?",
+    "correct_chunk_id": "func_001",
+    "top_3": [
+      {
+        "score": 0.8483798503875732,
+        "id": "func_001",
+        "function_name": "verify_jwt_token",
+        "category": "auth",
+        "description": "Проверяет JWT-токен и возвращает payload или причину невалидности.",
+        "code": "def verify_jwt_token(token: str, secret: str) -> dict:\n    \"\"\"Проверяет JWT-токен и возвращает payload или причину невалидности.\"\"\"\n    try:\n        payload = jwt.decode(token, secret, algorithms=[\"HS256\"])\n        return {\"valid\": True, \"data\": payload}\n    except jwt.ExpiredSignatureError:\n        return {\"valid\": False, \"error\": \"expired\"}\n    except jwt.InvalidTokenError:\n        return {\"valid\": False, \"error\": \"invalid\"}"
+      },
+      {
+        "score": 0.8334262371063232,
+        "id": "func_012",
+        "function_name": "revoke_token",
+        "category": "auth",
+        "description": "Добавляет токен в чёрный список, делая его недействительным до истечения срока.",
+        "code": "def revoke_token(token: str, blacklist: set, secret: str) -> None:\n    \"\"\"Добавляет токен в чёрный список, делая его недействительным до истечения срока.\"\"\"\n    try:\n        payload = jwt.decode(token, secret, algorithms=[\"HS256\"])\n        jti = payload.get(\"jti\", hashlib.sha256(token.encode()).hexdigest())\n        blacklist.add(jti)\n    except jwt.InvalidTokenError:\n        blacklist.add(hashlib.sha256(token.encode()).hexdigest())"
+      },
+      {
+        "score": 0.8282327651977539,
+        "id": "func_007",
+        "function_name": "refresh_jwt_token",
+        "category": "auth",
+        "description": "Обновляет JWT-токен, выдавая новый с обновлённым временем истечения.",
+        "code": "def refresh_jwt_token(token: str, secret: str, ttl_seconds: int = 3600) -> str:\n    \"\"\"Обновляет JWT-токен, выдавая новый с обновлённым временем истечения.\"\"\"\n    payload = jwt.decode(token, secret, algorithms=[\"HS256\"])\n    payload.pop(\"exp\", None)\n    payload.pop(\"iat\", None)\n    return issue_jwt_token(payload, secret, ttl_seconds)"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_02",
+    "query": "where is password hashing implemented",
+    "correct_chunk_id": "func_002",
+    "top_3": [
+      {
+        "score": 0.8310577869415283,
+        "id": "func_002",
+        "function_name": "hash_password",
+        "category": "auth",
+        "description": "Хэширует пароль с помощью bcrypt с cost-фактором 12.",
+        "code": "def hash_password(password: str) -> str:\n    \"\"\"Хэширует пароль с помощью bcrypt с cost-фактором 12.\"\"\"\n    salt = bcrypt.gensalt(rounds=12)\n    return bcrypt.hashpw(password.encode(\"utf-8\"), salt).decode(\"utf-8\")"
+      },
+      {
+        "score": 0.8067144751548767,
+        "id": "func_003",
+        "function_name": "check_password",
+        "category": "auth",
+        "description": "Сравнивает открытый пароль с bcrypt-хэшем и возвращает результат проверки.",
+        "code": "def check_password(plain: str, hashed: str) -> bool:\n    \"\"\"Сравнивает открытый пароль с bcrypt-хэшем и возвращает результат проверки.\"\"\"\n    return bcrypt.checkpw(plain.encode(\"utf-8\"), hashed.encode(\"utf-8\"))"
+      },
+      {
+        "score": 0.7926349639892578,
+        "id": "func_017",
+        "function_name": "reset_password",
+        "category": "auth",
+        "description": "Применяет новый пароль после проверки токена сброса из хранилища.",
+        "code": "def reset_password(token: str, new_password: str, token_store: dict) -> bool:\n    \"\"\"Применяет новый пароль после проверки токена сброса из хранилища.\"\"\"\n    entry = token_store.get(token)\n    if not entry:\n        return False\n    if datetime.datetime.utcnow() > entry[\"expires_at\"]:\n        del token_store[token]\n        return False\n    entry[\"user\"][\"password_hash\"] = hash_password(new_password)\n    del token_store[token]\n    return True"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_03",
+    "query": "проверка двухфакторной аутентификации по коду",
+    "correct_chunk_id": "func_014",
+    "top_3": [
+      {
+        "score": 0.8959797620773315,
+        "id": "func_014",
+        "function_name": "validate_2fa_code",
+        "category": "auth",
+        "description": "Проверяет одноразовый TOTP-код двухфакторной аутентификации по секрету.",
+        "code": "def validate_2fa_code(secret: str, code: str) -> bool:\n    \"\"\"Проверяет одноразовый TOTP-код двухфакторной аутентификации по секрету.\"\"\"\n    totp = pyotp.TOTP(secret)\n    return totp.verify(code, valid_window=1)"
+      },
+      {
+        "score": 0.8403140306472778,
+        "id": "func_003",
+        "function_name": "check_password",
+        "category": "auth",
+        "description": "Сравнивает открытый пароль с bcrypt-хэшем и возвращает результат проверки.",
+        "code": "def check_password(plain: str, hashed: str) -> bool:\n    \"\"\"Сравнивает открытый пароль с bcrypt-хэшем и возвращает результат проверки.\"\"\"\n    return bcrypt.checkpw(plain.encode(\"utf-8\"), hashed.encode(\"utf-8\"))"
+      },
+      {
+        "score": 0.8394393920898438,
+        "id": "func_005",
+        "function_name": "validate_credentials",
+        "category": "auth",
+        "description": "Проверяет, что логин и пароль непустые и соответствуют минимальным требованиям.",
+        "code": "def validate_credentials(username: str, password: str) -> tuple[bool, str]:\n    \"\"\"Проверяет, что логин и пароль непустые и соответствуют минимальным требованиям.\"\"\"\n    if not username or len(username) < 3:\n        return False, \"username too short\"\n    if not password or len(password) < 8:\n        return False, \"password too short\"\n    return True, \"\""
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_04",
+    "query": "logout user and clear session",
+    "correct_chunk_id": "func_010",
+    "top_3": [
+      {
+        "score": 0.8769808411598206,
+        "id": "func_010",
+        "function_name": "logout_user",
+        "category": "auth",
+        "description": "Завершает сессию пользователя, удаляя её из хранилища активных сессий.",
+        "code": "def logout_user(session_id: str, session_store: dict) -> bool:\n    \"\"\"Завершает сессию пользователя, удаляя её из хранилища активных сессий.\"\"\"\n    if session_id in session_store:\n        del session_store[session_id]\n        return True\n    return False"
+      },
+      {
+        "score": 0.8265218734741211,
+        "id": "func_025",
+        "function_name": "delete_user",
+        "category": "database",
+        "description": "Удаляет запись пользователя из базы данных по идентификатору.",
+        "code": "def delete_user(user_id: int, conn: object) -> bool:\n    \"\"\"Удаляет запись пользователя из базы данных по идентификатору.\"\"\"\n    cursor = conn.cursor()\n    cursor.execute(\"DELETE FROM users WHERE id = ?\", (user_id,))\n    conn.commit()\n    return cursor.rowcount > 0"
+      },
+      {
+        "score": 0.8143361210823059,
+        "id": "func_019",
+        "function_name": "unlock_user",
+        "category": "auth",
+        "description": "Разблокирует учётную запись пользователя, сбрасывая флаг блокировки.",
+        "code": "def unlock_user(user_id: int, conn: object) -> bool:\n    \"\"\"Разблокирует учётную запись пользователя, сбрасывая флаг блокировки.\"\"\"\n    cursor = conn.cursor()\n    cursor.execute(\"UPDATE users SET is_active = 1, blocked_at = NULL WHERE id = ?\", (user_id,))\n    conn.commit()\n    return cursor.rowcount > 0"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_05",
+    "query": "проверить права администратора на эндпоинте",
+    "correct_chunk_id": "func_109",
+    "top_3": [
+      {
+        "score": 0.8336148262023926,
+        "id": "func_008",
+        "function_name": "has_permission",
+        "category": "auth",
+        "description": "Проверяет наличие указанного права у пользователя по его ролям.",
+        "code": "def has_permission(user: dict, permission: str) -> bool:\n    \"\"\"Проверяет наличие указанного права у пользователя по его ролям.\"\"\"\n    role_permissions: dict[str, list[str]] = {\n        \"admin\": [\"read\", \"write\", \"delete\", \"manage\"],\n        \"editor\": [\"read\", \"write\"],\n        \"viewer\": [\"read\"],\n    }\n    role = user.get(\"role\", \"viewer\")\n    return permission in role_permissions.get(role, [])"
+      },
+      {
+        "score": 0.8092227578163147,
+        "id": "func_009",
+        "function_name": "require_admin",
+        "category": "auth",
+        "description": "Декоратор, выбрасывающий PermissionError если пользователь не является администратором.",
+        "code": "def require_admin(func):\n    \"\"\"Декоратор, выбрасывающий PermissionError если пользователь не является администратором.\"\"\"\n    @functools.wraps(func)\n    def wrapper(*args, **kwargs):\n        user = kwargs.get(\"user\") or (args[0] if args else None)\n        if not user or user.get(\"role\") != \"admin\":\n            raise PermissionError(\"Admin role required\")\n        return func(*args, **kwargs)\n    return wrapper"
+      },
+      {
+        "score": 0.7859264016151428,
+        "id": "func_005",
+        "function_name": "validate_credentials",
+        "category": "auth",
+        "description": "Проверяет, что логин и пароль непустые и соответствуют минимальным требованиям.",
+        "code": "def validate_credentials(username: str, password: str) -> tuple[bool, str]:\n    \"\"\"Проверяет, что логин и пароль непустые и соответствуют минимальным требованиям.\"\"\"\n    if not username or len(username) < 3:\n        return False, \"username too short\"\n    if not password or len(password) < 8:\n        return False, \"password too short\"\n    return True, \"\""
+      }
+    ],
+    "hit_at_3": false
+  },
+  {
+    "question_id": "q_06",
+    "query": "получить пользователя по электронной почте",
+    "correct_chunk_id": "func_022",
+    "top_3": [
+      {
+        "score": 0.88194739818573,
+        "id": "func_022",
+        "function_name": "get_user_by_email",
+        "category": "database",
+        "description": "Ищет пользователя по адресу электронной почты и возвращает запись или None.",
+        "code": "def get_user_by_email(email: str, conn: object) -> dict | None:\n    \"\"\"Ищет пользователя по адресу электронной почты и возвращает запись или None.\"\"\"\n    cursor = conn.cursor()\n    cursor.execute(\"SELECT * FROM users WHERE email = ? LIMIT 1\", (email.lower().strip(),))\n    row = cursor.fetchone()\n    if row is None:\n        return None\n    return dict(zip([d[0] for d in cursor.description], row))"
+      },
+      {
+        "score": 0.838159441947937,
+        "id": "func_023",
+        "function_name": "create_user",
+        "category": "database",
+        "description": "Создаёт нового пользователя в базе данных и возвращает его идентификатор.",
+        "code": "def create_user(email: str, password_hash: str, conn: object) -> int:\n    \"\"\"Создаёт нового пользователя в базе данных и возвращает его идентификатор.\"\"\"\n    cursor = conn.cursor()\n    cursor.execute(\n        \"INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)\",\n        (email.lower().strip(), password_hash, datetime.datetime.utcnow().isoformat()),\n    )\n    conn.commit()\n    return cursor.lastrowid"
+      },
+      {
+        "score": 0.8267215490341187,
+        "id": "func_020",
+        "function_name": "get_current_user",
+        "category": "auth",
+        "description": "Декодирует JWT из заголовка запроса и возвращает данные текущего пользователя.",
+        "code": "def get_current_user(auth_header: str, secret: str) -> dict | None:\n    \"\"\"Декодирует JWT из заголовка запроса и возвращает данные текущего пользователя.\"\"\"\n    token = parse_auth_header(auth_header)\n    if not token:\n        return None\n    result = verify_jwt_token(token, secret)\n    if not result[\"valid\"]:\n        return None\n    return result[\"data\"]"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_07",
+    "query": "rollback transaction in case of error",
+    "correct_chunk_id": "func_036",
+    "top_3": [
+      {
+        "score": 0.8570921421051025,
+        "id": "func_036",
+        "function_name": "rollback_transaction",
+        "category": "database",
+        "description": "Откатывает текущую транзакцию, отменяя все незафиксированные изменения.",
+        "code": "def rollback_transaction(conn: object) -> None:\n    \"\"\"Откатывает текущую транзакцию, отменяя все незафиксированные изменения.\"\"\"\n    conn.rollback()"
+      },
+      {
+        "score": 0.7938723564147949,
+        "id": "func_012",
+        "function_name": "revoke_token",
+        "category": "auth",
+        "description": "Добавляет токен в чёрный список, делая его недействительным до истечения срока.",
+        "code": "def revoke_token(token: str, blacklist: set, secret: str) -> None:\n    \"\"\"Добавляет токен в чёрный список, делая его недействительным до истечения срока.\"\"\"\n    try:\n        payload = jwt.decode(token, secret, algorithms=[\"HS256\"])\n        jti = payload.get(\"jti\", hashlib.sha256(token.encode()).hexdigest())\n        blacklist.add(jti)\n    except jwt.InvalidTokenError:\n        blacklist.add(hashlib.sha256(token.encode()).hexdigest())"
+      },
+      {
+        "score": 0.7915969491004944,
+        "id": "func_035",
+        "function_name": "commit_transaction",
+        "category": "database",
+        "description": "Фиксирует текущую транзакцию и сохраняет все изменения в базе данных.",
+        "code": "def commit_transaction(conn: object) -> None:\n    \"\"\"Фиксирует текущую транзакцию и сохраняет все изменения в базе данных.\"\"\"\n    conn.commit()"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_08",
+    "query": "массовая вставка большого количества записей",
+    "correct_chunk_id": "func_140",
+    "top_3": [
+      {
+        "score": 0.8591183423995972,
+        "id": "func_040",
+        "function_name": "bulk_insert_records",
+        "category": "database",
+        "description": "Вставляет список словарей в таблицу одним пакетным запросом executemany.",
+        "code": "def bulk_insert_records(conn: object, table: str, records: list[dict]) -> int:\n    \"\"\"Вставляет список словарей в таблицу одним пакетным запросом executemany.\"\"\"\n    if not records:\n        return 0\n    columns = list(records[0].keys())\n    placeholders = \", \".join(\"?\" * len(columns))\n    sql = f\"INSERT INTO {table} ({chr(44).join(columns)}) VALUES ({placeholders})\"\n    values = [tuple(r[c] for c in columns) for r in records]\n    cursor = conn.cursor()\n    cursor.executemany(sql, values)\n    conn.commit()\n    return cursor.rowcount"
+      },
+      {
+        "score": 0.7980385422706604,
+        "id": "func_023",
+        "function_name": "create_user",
+        "category": "database",
+        "description": "Создаёт нового пользователя в базе данных и возвращает его идентификатор.",
+        "code": "def create_user(email: str, password_hash: str, conn: object) -> int:\n    \"\"\"Создаёт нового пользователя в базе данных и возвращает его идентификатор.\"\"\"\n    cursor = conn.cursor()\n    cursor.execute(\n        \"INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)\",\n        (email.lower().strip(), password_hash, datetime.datetime.utcnow().isoformat()),\n    )\n    conn.commit()\n    return cursor.lastrowid"
+      },
+      {
+        "score": 0.797973096370697,
+        "id": "func_052",
+        "function_name": "upload_file_multipart",
+        "category": "http",
+        "description": "Загружает файл на сервер через multipart/form-data POST-запрос.",
+        "code": "def upload_file_multipart(url: str, file_path: str, field_name: str = \"file\",\n                          extra_fields: dict | None = None) -> dict:\n    \"\"\"Загружает файл на сервер через multipart/form-data POST-запрос.\"\"\"\n    with open(file_path, \"rb\") as f:\n        files = {field_name: (pathlib.Path(file_path).name, f)}\n        data = extra_fields or {}\n        resp = requests.post(url, files=files, data=data, timeout=60)\n    resp.raise_for_status()\n    return resp.json()"
+      }
+    ],
+    "hit_at_3": false
+  },
+  {
+    "question_id": "q_09",
+    "query": "soft delete a record without removing it",
+    "correct_chunk_id": "func_029",
+    "top_3": [
+      {
+        "score": 0.8396442532539368,
+        "id": "func_029",
+        "function_name": "soft_delete_post",
+        "category": "database",
+        "description": "Помечает публикацию как удалённую, проставляя метку времени удаления.",
+        "code": "def soft_delete_post(post_id: int, conn: object) -> bool:\n    \"\"\"Помечает публикацию как удалённую, проставляя метку времени удаления.\"\"\"\n    cursor = conn.cursor()\n    cursor.execute(\n        \"UPDATE posts SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL\",\n        (datetime.datetime.utcnow().isoformat(), post_id),\n    )\n    conn.commit()\n    return cursor.rowcount > 0"
+      },
+      {
+        "score": 0.8055547475814819,
+        "id": "func_038",
+        "function_name": "drop_table",
+        "category": "database",
+        "description": "Удаляет таблицу из базы данных если она существует.",
+        "code": "def drop_table(conn: object, table_name: str) -> None:\n    \"\"\"Удаляет таблицу из базы данных если она существует.\"\"\"\n    conn.execute(f\"DROP TABLE IF EXISTS {table_name}\")\n    conn.commit()"
+      },
+      {
+        "score": 0.8015686869621277,
+        "id": "func_025",
+        "function_name": "delete_user",
+        "category": "database",
+        "description": "Удаляет запись пользователя из базы данных по идентификатору.",
+        "code": "def delete_user(user_id: int, conn: object) -> bool:\n    \"\"\"Удаляет запись пользователя из базы данных по идентификатору.\"\"\"\n    cursor = conn.cursor()\n    cursor.execute(\"DELETE FROM users WHERE id = ?\", (user_id,))\n    conn.commit()\n    return cursor.rowcount > 0"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_10",
+    "query": "пагинация при выборке списка пользователей",
+    "correct_chunk_id": "func_026",
+    "top_3": [
+      {
+        "score": 0.8930695652961731,
+        "id": "func_026",
+        "function_name": "list_users_paginated",
+        "category": "database",
+        "description": "Возвращает страницу пользователей с поддержкой пагинации через limit и offset.",
+        "code": "def list_users_paginated(conn: object, page: int = 1, page_size: int = 20) -> list[dict]:\n    \"\"\"Возвращает страницу пользователей с поддержкой пагинации через limit и offset.\"\"\"\n    offset = (page - 1) * page_size\n    cursor = conn.cursor()\n    cursor.execute(\"SELECT * FROM users ORDER BY id LIMIT ? OFFSET ?\", (page_size, offset))\n    columns = [d[0] for d in cursor.description]\n    return [dict(zip(columns, row)) for row in cursor.fetchall()]"
+      },
+      {
+        "score": 0.8384426236152649,
+        "id": "func_027",
+        "function_name": "count_users",
+        "category": "database",
+        "description": "Возвращает общее количество пользователей в таблице с опциональным фильтром.",
+        "code": "def count_users(conn: object, is_active: bool | None = None) -> int:\n    \"\"\"Возвращает общее количество пользователей в таблице с опциональным фильтром.\"\"\"\n    cursor = conn.cursor()\n    if is_active is None:\n        cursor.execute(\"SELECT COUNT(*) FROM users\")\n    else:\n        cursor.execute(\"SELECT COUNT(*) FROM users WHERE is_active = ?\", (int(is_active),))\n    return cursor.fetchone()[0]"
+      },
+      {
+        "score": 0.8282244205474854,
+        "id": "func_028",
+        "function_name": "find_orders_by_user",
+        "category": "database",
+        "description": "Возвращает список заказов конкретного пользователя, отсортированных по дате.",
+        "code": "def find_orders_by_user(user_id: int, conn: object, limit: int = 50) -> list[dict]:\n    \"\"\"Возвращает список заказов конкретного пользователя, отсортированных по дате.\"\"\"\n    cursor = conn.cursor()\n    cursor.execute(\n        \"SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT ?\",\n        (user_id, limit),\n    )\n    columns = [d[0] for d in cursor.description]\n    return [dict(zip(columns, row)) for row in cursor.fetchall()]"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_11",
+    "query": "обработка ситуации, когда сервер вернул 429",
+    "correct_chunk_id": "func_047",
+    "top_3": [
+      {
+        "score": 0.864966869354248,
+        "id": "func_047",
+        "function_name": "handle_rate_limit",
+        "category": "http",
+        "description": "Обрабатывает ответ 429, ожидая время из заголовка Retry-After перед повтором.",
+        "code": "def handle_rate_limit(response: requests.Response) -> None:\n    \"\"\"Обрабатывает ответ 429, ожидая время из заголовка Retry-After перед повтором.\"\"\"\n    if response.status_code != 429:\n        return\n    retry_after = response.headers.get(\"Retry-After\", \"5\")\n    try:\n        wait = float(retry_after)\n    except ValueError:\n        wait = 5.0\n    time.sleep(min(wait, 60.0))"
+      },
+      {
+        "score": 0.8290668725967407,
+        "id": "func_044",
+        "function_name": "retry_request",
+        "category": "http",
+        "description": "Повторяет HTTP-запрос с экспоненциальной задержкой при ошибках соединения.",
+        "code": "def retry_request(url: str, method: str = \"GET\", max_retries: int = 3,\n                  backoff: float = 1.0, **kwargs) -> requests.Response:\n    \"\"\"Повторяет HTTP-запрос с экспоненциальной задержкой при ошибках соединения.\"\"\"\n    for attempt in range(max_retries):\n        try:\n            resp = requests.request(method, url, timeout=10, **kwargs)\n            resp.raise_for_status()\n            return resp\n        except requests.RequestException:\n            if attempt == max_retries - 1:\n                raise\n            time.sleep(backoff * (2 ** attempt))"
+      },
+      {
+        "score": 0.8266511559486389,
+        "id": "func_056",
+        "function_name": "handle_redirect",
+        "category": "http",
+        "description": "Следует за HTTP-редиректом вручную и возвращает финальный ответ.",
+        "code": "def handle_redirect(url: str, max_hops: int = 5) -> requests.Response:\n    \"\"\"Следует за HTTP-редиректом вручную и возвращает финальный ответ.\"\"\"\n    current_url = url\n    for _ in range(max_hops):\n        resp = requests.get(current_url, allow_redirects=False, timeout=10)\n        if resp.status_code in (301, 302, 303, 307, 308):\n            current_url = resp.headers.get(\"Location\", current_url)\n        else:\n            return resp\n    raise RuntimeError(f\"Too many redirects for {url}\")"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_12",
+    "query": "send file via http multipart upload",
+    "correct_chunk_id": "func_152",
+    "top_3": [
+      {
+        "score": 0.8659866452217102,
+        "id": "func_052",
+        "function_name": "upload_file_multipart",
+        "category": "http",
+        "description": "Загружает файл на сервер через multipart/form-data POST-запрос.",
+        "code": "def upload_file_multipart(url: str, file_path: str, field_name: str = \"file\",\n                          extra_fields: dict | None = None) -> dict:\n    \"\"\"Загружает файл на сервер через multipart/form-data POST-запрос.\"\"\"\n    with open(file_path, \"rb\") as f:\n        files = {field_name: (pathlib.Path(file_path).name, f)}\n        data = extra_fields or {}\n        resp = requests.post(url, files=files, data=data, timeout=60)\n    resp.raise_for_status()\n    return resp.json()"
+      },
+      {
+        "score": 0.8250104784965515,
+        "id": "func_097",
+        "function_name": "send_email",
+        "category": "utils",
+        "description": "Отправляет HTML-письмо через SMTP-сервер с поддержкой STARTTLS.",
+        "code": "def send_email(to: str, subject: str, html_body: str,\n               smtp_host: str, smtp_port: int = 587,\n               login: str = \"\", password: str = \"\") -> None:\n    \"\"\"Отправляет HTML-письмо через SMTP-сервер с поддержкой STARTTLS.\"\"\"\n    msg = email_module.MIMEMultipart(\"alternative\")\n    msg[\"Subject\"] = subject\n    msg[\"From\"] = login\n    msg[\"To\"] = to\n    msg.attach(email_module.MIMEText(html_body, \"html\", \"utf-8\"))\n    with smtplib.SMTP(smtp_host, smtp_port) as server:\n        server.starttls()\n        if login and password:\n            server.login(login, password)\n        server.sendmail(login, [to], msg.as_string())"
+      },
+      {
+        "score": 0.8240227699279785,
+        "id": "func_046",
+        "function_name": "send_webhook",
+        "category": "http",
+        "description": "Отправляет POST-уведомление на webhook-URL с подписью HMAC в заголовке.",
+        "code": "def send_webhook(url: str, payload: dict, secret: str, timeout: int = 5) -> int:\n    \"\"\"Отправляет POST-уведомление на webhook-URL с подписью HMAC в заголовке.\"\"\"\n    body = json.dumps(payload, ensure_ascii=False).encode(\"utf-8\")\n    sig = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()\n    headers = {\"Content-Type\": \"application/json\", \"X-Signature-256\": f\"sha256={sig}\"}\n    resp = requests.post(url, data=body, headers=headers, timeout=timeout)\n    return resp.status_code"
+      }
+    ],
+    "hit_at_3": false
+  },
+  {
+    "question_id": "q_13",
+    "query": "отправка уведомления через webhook",
+    "correct_chunk_id": "func_046",
+    "top_3": [
+      {
+        "score": 0.866175651550293,
+        "id": "func_046",
+        "function_name": "send_webhook",
+        "category": "http",
+        "description": "Отправляет POST-уведомление на webhook-URL с подписью HMAC в заголовке.",
+        "code": "def send_webhook(url: str, payload: dict, secret: str, timeout: int = 5) -> int:\n    \"\"\"Отправляет POST-уведомление на webhook-URL с подписью HMAC в заголовке.\"\"\"\n    body = json.dumps(payload, ensure_ascii=False).encode(\"utf-8\")\n    sig = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()\n    headers = {\"Content-Type\": \"application/json\", \"X-Signature-256\": f\"sha256={sig}\"}\n    resp = requests.post(url, data=body, headers=headers, timeout=timeout)\n    return resp.status_code"
+      },
+      {
+        "score": 0.785933256149292,
+        "id": "func_097",
+        "function_name": "send_email",
+        "category": "utils",
+        "description": "Отправляет HTML-письмо через SMTP-сервер с поддержкой STARTTLS.",
+        "code": "def send_email(to: str, subject: str, html_body: str,\n               smtp_host: str, smtp_port: int = 587,\n               login: str = \"\", password: str = \"\") -> None:\n    \"\"\"Отправляет HTML-письмо через SMTP-сервер с поддержкой STARTTLS.\"\"\"\n    msg = email_module.MIMEMultipart(\"alternative\")\n    msg[\"Subject\"] = subject\n    msg[\"From\"] = login\n    msg[\"To\"] = to\n    msg.attach(email_module.MIMEText(html_body, \"html\", \"utf-8\"))\n    with smtplib.SMTP(smtp_host, smtp_port) as server:\n        server.starttls()\n        if login and password:\n            server.login(login, password)\n        server.sendmail(login, [to], msg.as_string())"
+      },
+      {
+        "score": 0.7808519005775452,
+        "id": "func_016",
+        "function_name": "send_password_reset_email",
+        "category": "auth",
+        "description": "Отправляет письмо со ссылкой для сброса пароля на указанный адрес.",
+        "code": "def send_password_reset_email(email: str, reset_token: str, base_url: str) -> None:\n    \"\"\"Отправляет письмо со ссылкой для сброса пароля на указанный адрес.\"\"\"\n    link = f\"{base_url}/reset-password?token={reset_token}\"\n    msg = email_module.MIMEText(f\"Для сброса пароля перейдите по ссылке: {link}\", \"plain\", \"utf-8\")\n    msg[\"Subject\"] = \"Сброс пароля\"\n    msg[\"From\"] = \"noreply@example.com\"\n    msg[\"To\"] = email\n    with smtplib.SMTP(\"smtp.example.com\", 587) as server:\n        server.starttls()\n        server.sendmail(\"noreply@example.com\", [email], msg.as_string())"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_14",
+    "query": "retry http request with exponential backoff",
+    "correct_chunk_id": "func_044",
+    "top_3": [
+      {
+        "score": 0.9027020335197449,
+        "id": "func_044",
+        "function_name": "retry_request",
+        "category": "http",
+        "description": "Повторяет HTTP-запрос с экспоненциальной задержкой при ошибках соединения.",
+        "code": "def retry_request(url: str, method: str = \"GET\", max_retries: int = 3,\n                  backoff: float = 1.0, **kwargs) -> requests.Response:\n    \"\"\"Повторяет HTTP-запрос с экспоненциальной задержкой при ошибках соединения.\"\"\"\n    for attempt in range(max_retries):\n        try:\n            resp = requests.request(method, url, timeout=10, **kwargs)\n            resp.raise_for_status()\n            return resp\n        except requests.RequestException:\n            if attempt == max_retries - 1:\n                raise\n            time.sleep(backoff * (2 ** attempt))"
+      },
+      {
+        "score": 0.8392558693885803,
+        "id": "func_047",
+        "function_name": "handle_rate_limit",
+        "category": "http",
+        "description": "Обрабатывает ответ 429, ожидая время из заголовка Retry-After перед повтором.",
+        "code": "def handle_rate_limit(response: requests.Response) -> None:\n    \"\"\"Обрабатывает ответ 429, ожидая время из заголовка Retry-After перед повтором.\"\"\"\n    if response.status_code != 429:\n        return\n    retry_after = response.headers.get(\"Retry-After\", \"5\")\n    try:\n        wait = float(retry_after)\n    except ValueError:\n        wait = 5.0\n    time.sleep(min(wait, 60.0))"
+      },
+      {
+        "score": 0.8306273221969604,
+        "id": "func_050",
+        "function_name": "measure_latency",
+        "category": "http",
+        "description": "Измеряет время ответа HTTP-эндпоинта в миллисекундах.",
+        "code": "def measure_latency(url: str, method: str = \"GET\", **kwargs) -> float:\n    \"\"\"Измеряет время ответа HTTP-эндпоинта в миллисекундах.\"\"\"\n    start = time.monotonic()\n    try:\n        requests.request(method, url, timeout=10, **kwargs)\n    except requests.RequestException:\n        pass\n    return (time.monotonic() - start) * 1000"
+      }
+    ],
+    "hit_at_3": true
+  },
+  {
+    "question_id": "q_15",
+    "query": "проксирование запроса на другой сервер",
+    "correct_chunk_id": "func_149",
+    "top_3": [
+      {
+        "score": 0.84959477186203,
+        "id": "func_049",
+        "function_name": "proxy_request",
+        "category": "http",
+        "description": "Проксирует входящий запрос на целевой URL и возвращает ответ бэкенда.",
+        "code": "def proxy_request(target_url: str, method: str, headers: dict,\n                  body: bytes | None = None) -> requests.Response:\n    \"\"\"Проксирует входящий запрос на целевой URL и возвращает ответ бэкенда.\"\"\"\n    hop_by_hop = {\"connection\", \"keep-alive\", \"transfer-encoding\", \"te\",\n                  \"upgrade\", \"proxy-authorization\", \"proxy-authenticate\"}\n    clean_headers = {k: v for k, v in headers.items() if k.lower() not in hop_by_hop}\n    return requests.request(method, target_url, headers=clean_headers,\n                            data=body, timeout=15, allow_redirects=False)"
+      },
+      {
+        "score": 0.8225149512290955,
+        "id": "func_060",
+        "function_name": "broadcast_to_servers",
+        "category": "http",
+        "description": "Отправляет одинаковый POST-запрос на список серверов и собирает статусы ответов.",
+        "code": "def broadcast_to_servers(urls: list[str], payload: dict,\n                         headers: dict | None = None) -> list[dict]:\n    \"\"\"Отправляет одинаковый POST-запрос на список серверов и собирает статусы ответов.\"\"\"\n    results = []\n    for url in urls:\n        try:\n            resp = requests.post(url, json=payload, headers=headers or {}, timeout=5)\n            results.append({\"url\": url, \"status\": resp.status_code, \"ok\": resp.ok})\n        except requests.RequestException as e:\n            results.append({\"url\": url, \"status\": None, \"ok\": False, \"error\": str(e)})\n    return results"
+      },
+      {
+        "score": 0.8117160797119141,
+        "id": "func_044",
+        "function_name": "retry_request",
+        "category": "http",
+        "description": "Повторяет HTTP-запрос с экспоненциальной задержкой при ошибках соединения.",
+        "code": "def retry_request(url: str, method: str = \"GET\", max_retries: int = 3,\n                  backoff: float = 1.0, **kwargs) -> requests.Response:\n    \"\"\"Повторяет HTTP-запрос с экспоненциальной задержкой при ошибках соединения.\"\"\"\n    for attempt in range(max_retries):\n        try:\n            resp = requests.request(method, url, timeout=10, **kwargs)\n            resp.raise_for_status()\n            return resp\n        except requests.RequestException:\n            if attempt == max_retries - 1:\n                raise\n            time.sleep(backoff * (2 ** attempt))"
+      }
+    ],
+    "hit_at_3": false
+  }
+]
